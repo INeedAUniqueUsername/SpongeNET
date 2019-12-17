@@ -84,9 +84,9 @@ namespace SpongeNET
             int flavorNum;
             // timeStr = `hour ${time.hour}`;
             timeStrArr = TIME_OF_DAY_STRINGS[strBucket].str;
-            flavorNum = (player.id + time.day) % timeStrArr.length;
-            timeStr = timeStrArr[flavorNum];
-
+            //flavorNum = (player.id + time.day) % timeStrArr.length;
+            //timeStr = timeStrArr[flavorNum];
+            /*
             outP += `${ timeStr}
             on day ${ time.day + 1}
             of the month of ${ cons.MONTHS[time.month]}, year ${ time.year}.`;
@@ -101,8 +101,8 @@ namespace SpongeNET
             outP += `and there are ${ cons.TICKS_IN_DAY}
             ticks in a day, or ~${ parseFloat(cons.TICKS_IN_DAY / 24, 2)}
             per MUD hour.`;
-
-            ut.chSend(message, outP);
+            */
+            //ut.chSend(message, outP);
 
 
         }

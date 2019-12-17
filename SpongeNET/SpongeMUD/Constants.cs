@@ -17,6 +17,17 @@ namespace SpongeNET
     }
     class Constants
     {
+        enum PrivacyFlags
+        {
+            noListZone =        1,
+            noListWorld =       2,
+            noListScoreTables = 4,
+            noShowIdleTicks =   8,
+            noShowAge =         16,
+            noShowServer =      32,
+            reservedOption =    64
+        }
+        Dictionary<PrivacyFlags, string> PRIVACY_FLAG_DESC = new Dictionary<PrivacyFlags, string> {};
         public static readonly TimeString[] TIME_OF_DAY_STRINGS = new[]
             {
                 new TimeString(
