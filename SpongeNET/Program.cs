@@ -1,4 +1,5 @@
 ﻿using DSharpPlus;
+using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using Newtonsoft.Json;
 using SpongeNET.SpongeNET;
@@ -86,6 +87,10 @@ namespace SpongeNET
                 await e.Channel.SendMessageAsync("Loaded");
             }
             Console.WriteLine(e.Message.Content);
+            if(e.Author.Id == discord.CurrentUser.Id && !e.Message.Content.StartsWith(".as")) {
+                return;
+            }
+
             try {
                 await Task.Run(() => {
                     a.Handle(e.Message);

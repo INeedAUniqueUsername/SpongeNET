@@ -353,7 +353,7 @@ namespace SpongeNET.SpongeNET {
             events.Clear();
             elevator?.Update();
             if(elevator != null) {
-                if (elevator.moved) {
+                if (elevator.state == NetElevator.State.moved) {
                     var floor = elevator.floors[elevator.currentFloor];
                     events.Add(net => {
                         foreach(var playerId in players) {
@@ -361,7 +361,7 @@ namespace SpongeNET.SpongeNET {
                         }
                     });
                 }
-                if(elevator.stopped) {
+                if(elevator.state == NetElevator.State.stopped) {
                     events.Add(net => {
                         foreach (var playerId in players) {
                             net.GetChannel(playerId).SendMessageAsync($"The elevator stops. The elevator door opens.");
@@ -371,7 +371,7 @@ namespace SpongeNET.SpongeNET {
                     exits["out"] = floor.exit;
                     description = floor.desc;
                 }
-                if (elevator.started) {
+                if (elevator.state == NetElevator.State.starting) {
                     events.Add(net => {
                         foreach (var playerId in players) {
                             net.GetChannel(playerId).SendMessageAsync($"The elevator door closes. The elevator starts going {(elevator.goingUp ? "up" : "down")}");
@@ -390,50 +390,54 @@ namespace SpongeNET.SpongeNET {
         public bool goingUp = true;
         public HashSet<int> requestsUp = new HashSet<int>();
         public HashSet<int> requestsDown = new HashSet<int>();
-        public bool moved = false;
-        public bool stopped = false;
-        public bool started = false;
-        public ulong timeUntilMove = 6;
+        public enum State {
+            stopped, stationary, starting, moving, moved
+        }
+        public State state = State.stationary;
+        public int timeUntilMove = 6;
 
         public void Update() {
-            moved = false;
-            started = false;
 
             if (dest.Count() == 0 && requestsUp.Count() == 0 && requestsDown.Count() == 0) {
-                stopped = false;
+                state = State.stationary;
             } else if (timeUntilMove > 0) {
                 timeUntilMove--;
-                stopped = false;
-            } else if(stopped) {
-                started = true;
-                stopped = false;
-                timeUntilMove = 2;
-
-                if(goingUp && !ShouldGoUp() && ShouldGoDown()) {
-                    goingUp = false;
-                } else if(ShouldGoUp() && !ShouldGoDown()) {
-                    goingUp = true;
+                if(state == State.stopped) {
+                    state = State.stationary;
+                } else if(state == State.starting) {
+                    state = State.moving;
                 }
+            } else if (state == State.moving) {
+                if (goingUp) {
+                    currentFloor++;
+                } else {
+                    currentFloor--;
+                }
+                state = State.moved;
+                timeUntilMove = 2;
             } else if(goingUp) {
 
                 if (requestsUp.Contains(currentFloor)) {
                     requestsUp.Remove(currentFloor);
                     //Stop here
-                    stopped = true;
+                    state = State.stopped;
                     timeUntilMove = 6;
                 }
                 if (dest.Contains(currentFloor)) {
                     dest.Remove(currentFloor);
                     //Stop here
-                    stopped = true;
+                    state = State.stopped;
                     timeUntilMove = 6;
                 } else if (ShouldGoUp()) {
                     //Keep going up
-                    currentFloor++;
-                    moved = true;
-                    timeUntilMove = 2;
+                    SetMoving();
                 } else {
                     goingUp = false;
+                    if (requestsDown.Contains(currentFloor)) {
+                        //Stop here
+                        state = State.stopped;
+                        timeUntilMove = 6;
+                    }
                 }
             } else {
                 if (requestsDown.Contains(currentFloor)) {
@@ -444,21 +448,23 @@ namespace SpongeNET.SpongeNET {
                 if (dest.Contains(currentFloor)) {
                     dest.Remove(currentFloor);
                     //Stop here
-                    stopped = true;
+                    state = State.stopped;
                     timeUntilMove = 6;
                 } else if (ShouldGoDown()) {
                     //Keep going down
-                    currentFloor--;
-                    moved = true;
-                    timeUntilMove = 2;
+                    SetMoving();
                 } else {
                     goingUp = true;
                     if(requestsUp.Contains(currentFloor)) {
                         //Stop here
-                        stopped = true;
+                        state = State.stopped;
                         timeUntilMove = 6;
                     }
-                }
+                }   
+            }
+            void SetMoving() {
+                timeUntilMove = state == State.starting ? 2 : 0;
+                state = (state == State.moved) ? State.moving : State.starting;
             }
             bool ShouldGoUp() => dest.Any(f => f > currentFloor) || requestsUp.Any(f => f > currentFloor) || requestsDown.Any(f => f > currentFloor);
             bool ShouldGoDown() => dest.Any(f => f < currentFloor) || requestsUp.Any(f => f < currentFloor) || requestsDown.Any(f => f < currentFloor);
