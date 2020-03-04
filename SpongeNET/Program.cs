@@ -22,13 +22,14 @@ namespace SpongeNET
         async Task MainAsync(string[] args)
         {
             discord = new DiscordClient(new DiscordConfiguration {
-                Token = "NjU2Mzk0OTY0MjQ2MjAwMzMw.XfiBfg.o5EqmrWJTVl2Kyvk2DpVz_raU5Y",
+                Token = "NDE3NTQyNDQ0MzUyMDEyMjg4.XgHF6A.sWSYkN9uGWQsnt62sYnAKJ4WKNk",
                 TokenType = TokenType.Bot,
                 UseInternalLogHandler = true,
                 LogLevel = LogLevel.Debug
             });
             discord.MessageCreated += async e => await Task.Run(() => Handle(e));
             a = new Acro(discord);
+            m = new Markov(discord);
             net = new Net(discord);
             LoadModules();
             PeriodicSave();
@@ -54,10 +55,16 @@ namespace SpongeNET
         }
         public void LoadModules() {
             Load(ref a);
+            Load(ref net);
+            Load(ref m);
             a.Load(discord);
+            net.Load(discord);
+            m.Load(discord);
         }
         public void SaveModules() {
             Save(a);
+            Save(net);
+            Save(m);
         }
         public string GetFile<T>() {
             return $"./{typeof(T).Name}.xml";
@@ -68,7 +75,10 @@ namespace SpongeNET
         public void Save<T>(T t) {
             var f = $"./{typeof(T).Name}.json";
             Console.WriteLine(Path.GetFullPath(f));
-            File.WriteAllText(f, JsonConvert.SerializeObject(t));
+
+            File.WriteAllText(f, JsonConvert.SerializeObject(t, Formatting.Indented, new JsonSerializerSettings() {
+                TypeNameHandling = TypeNameHandling.All
+            }));
         }
         public void Load<T>(ref T t) {
             var f = $"{typeof(T).Name}.json";
@@ -77,7 +87,9 @@ namespace SpongeNET
                 t = JsonConvert.DeserializeObject<T>(File.ReadAllText(f));
         }
         Acro a;
+        Markov m;
         Net net;
+
         async void Handle(MessageCreateEventArgs e) {
             if (e.Message.Content.Equals(".save")) {
                 SaveModules();
@@ -95,6 +107,7 @@ namespace SpongeNET
                 await Task.Run(() => {
                     a.Handle(e.Message);
                     net.Handle(e.Message);
+                    m.Handle(e.Message);
                 });
             } catch(Exception ex) {
                 await e.Channel.SendMessageAsync($"Damn, you got me there, {e.Author.Mention}. Says here that \"{ex.Message}\". I don't know what that means, but uh oh, I guess. I'll just wait here until someone comes to fix me.");

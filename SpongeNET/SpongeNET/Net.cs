@@ -24,9 +24,9 @@ namespace SpongeNET.SpongeNET {
             this.discord = discord;
         }
         public void Update() {
-            foreach(var room in rooms.Values) {
+            foreach (var room in rooms.Values) {
                 room.Update();
-                foreach(var e in room.events) {
+                foreach (var e in room.events) {
                     e(this);
                 }
             }
@@ -53,7 +53,7 @@ namespace SpongeNET.SpongeNET {
             switch (Subsplit(ref command, ' ')) {
                 case ".net": {
                         SendMessage("Welcome to SpongeNET!" +
-                            (users.TryGetValue(id, out NetUser user) && user.currentPlayerGuid != 0  ? $"You are currently logged in as {playerEntities[user.currentPlayerGuid].name}" :
+                            (users.TryGetValue(id, out NetUser user) && user.currentPlayerGuid != 0 ? $"You are currently logged in as {playerEntities[user.currentPlayerGuid].name}" :
                             user != null ? "You are not currently logged in" :
                             "You do not have an account yet."));
                         break;
@@ -89,9 +89,13 @@ namespace SpongeNET.SpongeNET {
                 case "login": {
                         if (IsRegistered(out NetUser user)) {
                             var player = user.playerCharacters.Select(playerId => playerEntities[playerId]).FirstOrDefault(np => np.name == command);
-                            user.currentPlayerGuid = player.guid;
+                            if (player != null) {
+                                user.currentPlayerGuid = player.guid;
+                                SendMessage($@"{m.Author.Mention}, you are now logged in as ""{player.name}""");
+                            } else {
+                                SendMessage($@"{m.Author.Mention}, you have no character named ""{command}""");
+                            }
 
-                            SendMessage($@"{m.Author.Mention}, you are now logged in as ""{player.name}""");
                         }
                         break;
                     }
@@ -103,35 +107,38 @@ namespace SpongeNET.SpongeNET {
                         break;
                     }
                 case "look": {
-                        if(IsRegistered(out NetUser user)) {
-                            if(user.currentPlayerGuid == 0) {
+                        if (IsRegistered(out NetUser user)) {
+                            if (user.currentPlayerGuid == 0) {
                                 SendMessage($@"{m.Author.Mention}, you are a disembodied consciousness outside of the realm of SpongeNET. Take control of one of your player characters using `login`!");
                             } else {
                                 var player = playerEntities[user.currentPlayerGuid];
-                                var room = rooms[player.roomId];
-                                Describe(room);
+                                if (rooms.TryGetValue(player.roomId, out var room)) {
+                                    Describe(room);
+                                } else {
+                                    SendMessage($@"You appear to be in Null Space. Since you have no idea where you are, there's pretty much no other answer.");
+                                }
                             }
                         }
                         break;
 
                     }
                 case "warp": {
-                        if(IsLoggedIn(out NetPlayer player)) {
-                            if(rooms.TryGetValue(command, out NetRoom room)) {
+                        if (IsLoggedIn(out NetPlayer player)) {
+                            if (rooms.TryGetValue(command, out NetRoom room)) {
                                 player.roomId = command;
                                 SendMessage($"{player.name} warps to room `{room.id}`!");
                             } else {
-                                SendMessage($"{player.name} daydreams about warping to a room known as `{room.id}`!");
+                                SendMessage($"{player.name} daydreams about warping to a room known as `{command}`!");
                             }
                         }
                         break;
                     }
                 case "elevator": {
-                        if(IsLoggedIn(out NetPlayer player)) {
+                        if (IsLoggedIn(out NetPlayer player)) {
                             var room = rooms[player.roomId];
                             switch (Subsplit(ref command, ' ')) {
                                 case "add": {
-                                        if(room.elevator == null) {
+                                        if (room.elevator == null) {
                                             SendMessage($"Added elevator in room {room.id}");
                                             room.elevator = new NetElevator();
                                         } else {
@@ -160,7 +167,7 @@ namespace SpongeNET.SpongeNET {
                                         if (room.elevator == null) {
                                             SendMessage($"There is no elevator in room {room.id}");
                                         } else {
-                                            if(int.TryParse(Subsplit(ref command, ' '), out int i)) {
+                                            if (int.TryParse(Subsplit(ref command, ' '), out int i)) {
                                                 room.elevator.dest.Add(i);
                                             }
                                         }
@@ -171,7 +178,7 @@ namespace SpongeNET.SpongeNET {
                                             SendMessage($"There is no elevator in room {room.id}");
                                         } else {
                                             string exitDest = Subsplit(ref command, ' ');
-                                            if(room.elevator.floors.RemoveAll(f => f.exit.destRoomId == exitDest) > 0) {
+                                            if (room.elevator.floors.RemoveAll(f => f.exit.destRoomId == exitDest) > 0) {
                                                 SendMessage($"Removed floor leading to `{exitDest}` in elevator of room {room.id}");
                                             } else {
                                                 SendMessage($"There is no floor leading to `{exitDest}` in elevator of room {room.id}");
@@ -207,19 +214,25 @@ namespace SpongeNET.SpongeNET {
                             if (room.exits.TryGetValue(exit, out NetExit e)) {
                                 player.roomId = e.destRoomId;
                                 room.players.Remove(player.guid);
-                                rooms[e.destRoomId].players.Add(player.guid);
+                                if (rooms.TryGetValue(e.destRoomId, out NetRoom dest)) {
+                                    dest.players.Add(player.guid);
 
-                                if(e.desc.Count() > 0) {
-                                    SendMessage(e.desc);
+                                    if (e.desc.Count() > 0) {
+                                        SendMessage(e.desc);
+                                    }
+                                    Describe(dest);
+                                } else {
+                                    SendMessage($"Actually that doesn't lead anywhere?");
                                 }
-                                Describe(rooms[e.destRoomId]);
+                            } else {
+                                SendMessage($"Where do you think you're going???");
                             }
                         }
                         break;
                     }
                 case "exit": {
-                        if(IsLoggedIn(out NetPlayer player)) {
-                            switch(Subsplit(ref command, ' ')) {
+                        if (IsLoggedIn(out NetPlayer player)) {
+                            switch (Subsplit(ref command, ' ')) {
                                 case "add": {
                                         var room = rooms[player.roomId];
                                         string exitName = Subsplit(ref command, ' ');
@@ -235,7 +248,7 @@ namespace SpongeNET.SpongeNET {
                                 case "remove": {
                                         var room = rooms[player.roomId];
                                         string exitName = Subsplit(ref command, ' ');
-                                        if(room.exits.TryGetValue(exitName, out NetExit e)) {
+                                        if (room.exits.TryGetValue(exitName, out NetExit e)) {
                                             room.exits.Remove(exitName);
                                             SendMessage($"Removed exit `{exitName}` from room `{room.id}` leading to `{e.destRoomId}`");
                                         } else {
@@ -248,7 +261,7 @@ namespace SpongeNET.SpongeNET {
                         break;
                     }
                 case "room": {
-                        if(IsLoggedIn(out NetPlayer player)) {
+                        if (IsLoggedIn(out NetPlayer player)) {
                             switch (Subsplit(ref command, ' ')) {
                                 case "create": {
                                         if (rooms.TryGetValue(command, out NetRoom room)) {
@@ -283,7 +296,7 @@ namespace SpongeNET.SpongeNET {
                                 return rooms.TryGetValue(roomId, out room);
                             }
                         }
-                        
+
                         break;
                     }
             }
@@ -301,7 +314,7 @@ namespace SpongeNET.SpongeNET {
             bool IsLoggedIn(out NetPlayer player) {
                 bool result = IsRegistered(out NetUser user) && user.currentPlayerGuid != 0;
                 player = result ? playerEntities[user.currentPlayerGuid] : null;
-                if(!result) {
+                if (!result) {
                     SendMessage($@"{m.Author.Mention}, you are not logged in.");
                 }
                 return result;
@@ -346,44 +359,39 @@ namespace SpongeNET.SpongeNET {
         public HashSet<ulong> items = new HashSet<ulong>();
         public HashSet<ulong> entities = new HashSet<ulong>();
         public Dictionary<string, NetExit> exits = new Dictionary<string, NetExit>();
-        public NetElevator elevator;
         public HashSet<Action<Net>> events = new HashSet<Action<Net>>();
+        public NetElevator elevator;
 
         public void Update() {
             events.Clear();
-            elevator?.Update();
-            if(elevator != null) {
-                if (elevator.state == NetElevator.State.moved) {
-                    var floor = elevator.floors[elevator.currentFloor];
-                    events.Add(net => {
-                        foreach(var playerId in players) {
-                            net.GetChannel(playerId).SendMessageAsync($"The elevator moves to **{floor.name}**");
-                        }
-                    });
-                }
-                if(elevator.state == NetElevator.State.stopped) {
-                    events.Add(net => {
-                        foreach (var playerId in players) {
-                            net.GetChannel(playerId).SendMessageAsync($"The elevator stops. The elevator door opens.");
-                        }
-                    });
-                    var floor = elevator.floors[elevator.currentFloor];
-                    exits["out"] = floor.exit;
-                    description = floor.desc;
-                }
-                if (elevator.state == NetElevator.State.starting) {
-                    events.Add(net => {
-                        foreach (var playerId in players) {
-                            net.GetChannel(playerId).SendMessageAsync($"The elevator door closes. The elevator starts going {(elevator.goingUp ? "up" : "down")}");
-                        }
-                    });
-                    exits.Remove("out");
-                }
+            elevator?.Update(this);
+            if (elevator != null) {
 
             }
         }
     }
-    public class NetElevator {
+    public class TypeDict<T> {
+        public Dictionary<Type, T> components;
+        public bool Has<U>() where U : T => components.ContainsKey(typeof(U));
+        public bool Has<U>(out U value) where U : T {
+            bool result = components.TryGetValue(typeof(U), out T value2);
+            value = (U)value2;
+            return result;
+        }
+
+        public U Get<U>() where U : T {
+            return (U)components[typeof(U)];
+        }
+        public void Set<U>(U value) where U : T {
+            components[typeof(U)] = value;
+        }
+        public IEnumerable<T> Values => components.Values;
+    }
+
+    public interface NetRoomBehavior {
+        void Update(NetRoom room);
+    }
+    public class NetElevator : NetRoomBehavior {
         public List<NetElevatorFloor> floors = new List<NetElevatorFloor>();
         public int currentFloor = 0;
         public HashSet<int> dest = new HashSet<int>();
@@ -395,76 +403,121 @@ namespace SpongeNET.SpongeNET {
         }
         public State state = State.stationary;
         public int timeUntilMove = 6;
+        public bool moved = false;
 
-        public void Update() {
-
-            if (dest.Count() == 0 && requestsUp.Count() == 0 && requestsDown.Count() == 0) {
-                state = State.stationary;
-            } else if (timeUntilMove > 0) {
-                timeUntilMove--;
-                if(state == State.stopped) {
+        public void Update(NetRoom room) {
+            UpdateMain();
+            UpdateRoom();
+            void UpdateRoom() {
+                if (moved) {
+                    var floor = floors[currentFloor];
+                    room.events.Add(net => {
+                        foreach (var playerId in room.players) {
+                            net.GetChannel(playerId).SendMessageAsync($"The elevator moves to **{floor.name}**");
+                        }
+                    });
+                }
+                if (state == NetElevator.State.stopped) {
+                    room.events.Add(net => {
+                        foreach (var playerId in room.players) {
+                            net.GetChannel(playerId).SendMessageAsync($"The elevator stops. The elevator door opens.");
+                        }
+                    });
+                    var floor = floors[currentFloor];
+                    room.exits["out"] = floor.exit;
+                    room.description = floor.desc;
+                }
+                if (state == NetElevator.State.starting) {
+                    room.events.Add(net => {
+                        foreach (var playerId in room.players) {
+                            net.GetChannel(playerId).SendMessageAsync($"The elevator door closes. The elevator starts going {(goingUp ? "up" : "down")}");
+                        }
+                    });
+                    room.exits.Remove("out");
+                }
+            }
+            void UpdateMain() {
+                moved = false;
+                if (dest.Count() == 0 && requestsUp.Count() == 0 && requestsDown.Count() == 0) {
                     state = State.stationary;
-                } else if(state == State.starting) {
-                    state = State.moving;
-                }
-            } else if (state == State.moving) {
-                if (goingUp) {
-                    currentFloor++;
+                    timeUntilMove = 2;
+                } else if (timeUntilMove > 0) {
+                    timeUntilMove--;
+                    if (state == State.stopped) {
+                        state = State.stationary;
+                    } else if (state == State.starting) {
+                        state = State.moving;
+                    }
+                } else if (state == State.moving) {
+                    if (goingUp) {
+                        currentFloor++;
+                    } else {
+                        currentFloor--;
+                    }
+                    moved = true;
+                    state = State.moved;
+                    timeUntilMove = 2;
                 } else {
-                    currentFloor--;
+                    UpdateMovement();
                 }
-                state = State.moved;
-                timeUntilMove = 2;
-            } else if(goingUp) {
+                void UpdateMovement() {
+                    if (goingUp) {
 
-                if (requestsUp.Contains(currentFloor)) {
-                    requestsUp.Remove(currentFloor);
-                    //Stop here
-                    state = State.stopped;
-                    timeUntilMove = 6;
-                }
-                if (dest.Contains(currentFloor)) {
-                    dest.Remove(currentFloor);
-                    //Stop here
-                    state = State.stopped;
-                    timeUntilMove = 6;
-                } else if (ShouldGoUp()) {
-                    //Keep going up
-                    SetMoving();
-                } else {
-                    goingUp = false;
-                    if (requestsDown.Contains(currentFloor)) {
-                        //Stop here
-                        state = State.stopped;
-                        timeUntilMove = 6;
+                        if (requestsUp.Contains(currentFloor)) {
+                            requestsUp.Remove(currentFloor);
+                            //Stop here
+                            SetStopped();
+                        }
+                        if (dest.Contains(currentFloor)) {
+                            dest.Remove(currentFloor);
+                            //Stop here
+                            SetStopped();
+                        } else if (ShouldGoUp()) {
+                            //Keep going up
+                            SetMoving();
+                        } else {
+                            goingUp = false;
+                            if (requestsDown.Contains(currentFloor)) {
+                                //Stop here
+                                SetStopped();
+                            }
+                        }
+                    } else {
+                        if (requestsDown.Contains(currentFloor)) {
+                            requestsDown.Remove(currentFloor);
+                            //Stop here
+                            SetStopped();
+                        }
+                        if (dest.Contains(currentFloor)) {
+                            dest.Remove(currentFloor);
+                            //Stop here
+                            SetStopped();
+                        } else if (ShouldGoDown()) {
+                            //Keep going down
+                            SetMoving();
+                        } else {
+                            goingUp = true;
+                            if (requestsUp.Contains(currentFloor)) {
+                                //Stop here
+                                SetStopped();
+                            }
+                        }
                     }
                 }
-            } else {
-                if (requestsDown.Contains(currentFloor)) {
-                    requestsDown.Remove(currentFloor);
-                    //Stop here
-                    timeUntilMove = 6;
-                }
-                if (dest.Contains(currentFloor)) {
-                    dest.Remove(currentFloor);
-                    //Stop here
-                    state = State.stopped;
-                    timeUntilMove = 6;
-                } else if (ShouldGoDown()) {
-                    //Keep going down
-                    SetMoving();
-                } else {
-                    goingUp = true;
-                    if(requestsUp.Contains(currentFloor)) {
-                        //Stop here
-                        state = State.stopped;
-                        timeUntilMove = 6;
-                    }
-                }   
+            }
+            void SetStopped() {
+                state = State.stopped;
+                timeUntilMove = 6;
             }
             void SetMoving() {
-                timeUntilMove = state == State.starting ? 2 : 0;
-                state = (state == State.moved) ? State.moving : State.starting;
+                if(state == State.moved) {
+                    state = State.moving;
+                    timeUntilMove = 0;
+                    UpdateMain();
+                } else if(state != State.moving) {
+                    state = State.starting;
+                    timeUntilMove = 2;
+                }
             }
             bool ShouldGoUp() => dest.Any(f => f > currentFloor) || requestsUp.Any(f => f > currentFloor) || requestsDown.Any(f => f > currentFloor);
             bool ShouldGoDown() => dest.Any(f => f < currentFloor) || requestsUp.Any(f => f < currentFloor) || requestsDown.Any(f => f < currentFloor);
