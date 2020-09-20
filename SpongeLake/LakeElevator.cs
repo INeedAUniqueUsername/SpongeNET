@@ -3,6 +3,7 @@ using System.Linq;
 
 namespace SpongeLake.SpongeLake {
     public class LakeElevator {
+        public string roomDesc;
         public List<LakeElevatorFloor> floors = new List<LakeElevatorFloor>();
         public int currentFloor = 0;
         public HashSet<int> dest = new HashSet<int>();
@@ -15,6 +16,13 @@ namespace SpongeLake.SpongeLake {
         public State state = State.stationary;
         public int timeUntilMove = 6;
         public bool moved = false;
+
+        public LakeElevator() {
+
+        }
+        public LakeElevator(LakeRoom source) {
+            roomDesc = source.description;
+        }
 
         public void Update(LakeRoom room) {
             UpdateMain();
@@ -36,7 +44,7 @@ namespace SpongeLake.SpongeLake {
                     });
                     var floor = floors[currentFloor];
                     room.exits["out"] = floor.exit;
-                    room.description = floor.desc;
+                    room.description = string.IsNullOrWhiteSpace(roomDesc) ? floor.desc : $"{roomDesc} ({floor.desc})";
                 }
                 if (state == LakeElevator.State.starting) {
                     room.events.Add(net => {

@@ -5,12 +5,11 @@ namespace SpongeLake.SpongeLake {
     public class LakeUser {
         public ulong userId;
         public ulong channelId;
-        public HashSet<ulong> playerCharacters = new HashSet<ulong>();
-        public ulong currentPlayerGuid;
+        public HashSet<LakePlayer> playerCharacters = new HashSet<LakePlayer>();
+        public LakePlayer currentPlayer;
         public LakeUser(ulong userId) {
             this.userId = userId;
         }
-        public IEnumerable<LakePlayer> GetPlayers(Lake lake) => playerCharacters.Select(playerId => lake.playerEntities[playerId]);
     }
     public class LakePlayer : NetEntity {
         public ulong userId;

@@ -20,7 +20,7 @@ namespace SpongeLake
         async Task MainAsync(string[] args)
         {
             discord = new DiscordClient(new DiscordConfiguration {
-                Token = "NjU2Mzk0OTY0MjQ2MjAwMzMw.XfiBcg.lf4lrXfWRfeDv-y9EX9iKHjUKiY",
+                Token = File.ReadAllText("token.txt"),
                 TokenType = TokenType.Bot,
                 UseInternalLogHandler = true,
                 LogLevel = LogLevel.Debug
@@ -78,29 +78,67 @@ namespace SpongeLake
         }
         Lake lake;
 
-        async void Handle(MessageCreateEventArgs e) {
-            if (e.Message.Content.Equals(".save")) {
-                SaveModules();
-                await e.Channel.SendMessageAsync("Saved");
-            } else if(e.Message.Content.Equals(".load")) {
-                LoadModules();
-                await e.Channel.SendMessageAsync("Loaded");
-            }
-            Console.WriteLine(e.Message.Content);
-            if(e.Author.Id == discord.CurrentUser.Id && !e.Message.Content.StartsWith(".as")) {
-                return;
-            }
+        /*
 
-            try {
-                await Task.Run(() => {
-                    lake.Handle(e.Message);
-                });
-            } catch(Exception ex) {
-                await e.Channel.SendMessageAsync($"Damn, you got me there, {e.Author.Mention}. Says here that \"{ex.Message}\". I don't know what that means, but uh oh, I guess. I'll just wait here until someone comes to fix me.");
-                SaveModules();
-                throw ex;
+            if commandList contains the command they typed...
+                ...is .enabled? if FALSE, let them know and return
+                ...is 
+
+        */
+        async void Handle(MessageCreateEventArgs e) {
+            //Core commands
+            //too complic8ed??
+            switch(e.Message.Content) {
+                case ".save":
+                    SaveModules();
+                    await e.Channel.SendMessageAsync("Saved");
+                    break;
+                case ".load":
+                    LoadModules();
+                    await e.Channel.SendMessageAsync("Loaded");
+                    break;
+                default:
+                    Console.WriteLine(e.Message.Content);
+                    if (e.Author.Id == discord.CurrentUser.Id && !e.Message.Content.StartsWith(".as")) {
+                        return;
+                    }
+                    try {
+                        await Task.Run(() => {
+                            lake.Handle(e.Message);
+                        });
+                    } catch (Exception ex) {
+                        await e.Channel.SendMessageAsync($"Damn, you got me there, {e.Author.Mention}. Says here that \"{ex.Message}\". I don't know what that means, but uh oh, I guess. I'll just wait here until someone comes to fix me.");
+                        SaveModules();
+                        throw ex;
+                    }
+                    break;
             }
-            
         }
+    }
+    //bool[] known;
+    //string answer;
+
+    //We can use this class to manage permissions... and keep the code in a massive switch block
+    //too many objects
+    //idk
+    //Print a giant string :p
+    //yeahh
+    /*
+     
+     
+     */
+    class CommandPermissions {
+        // enabled: bool
+        // minAcessLevel: int or something
+        // noUseInBattle: bool
+        // noUseWhileAsleep: bool   (will be TRUE for most commands except like topxp, topfame, help, etc.)
+        // moderatorPowers (idk) (bitmasked flags?)
+        // code: (a function to call or code to run)
+
+
+
+        // just thinking:
+        // MEHscript to run?
+        // log? (can be toggled to control something like logging or counting invocations of the command)?
     }
 }

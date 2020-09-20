@@ -37,7 +37,6 @@ namespace SpongeLake.SpongeLake {
         }
 
 
-
         public LakeUser GetUser(ulong playerId) {
             return users[playerEntities[playerId].userId];
         }
@@ -47,15 +46,19 @@ namespace SpongeLake.SpongeLake {
         public async void Handle(DiscordMessage m) {
             string command = m.Content;
 
-            string localPrefix = ".lake ";
-            if (StartsWithRemove(ref command, ".lake")) {
-
-            } else if (m.Channel.IsPrivate) {
-                localPrefix = "";
-            } else {
-                if (m.MentionedUsers.Select(u => u.Id).Contains(discord.CurrentUser.Id)) {
-                    m.Channel.SendMessageAsync($"{m.Author.Mention}, my prefix is `{prefix}`");
+            //Change the local prefix depending on context
+            bool prefixOptional = (m.Channel.IsPrivate || m.Channel.Name == "sponge-lake");
+            string localPrefix = prefixOptional ? "" : $"{prefix} ";
+            if (m.Content == $"<@!{discord.CurrentUser.Id}>") {
+                if (prefixOptional) {
+                    await m.Channel.SendMessageAsync($"{m.Author.Mention}, my prefix is `{prefix}`, though it's optional in this channel");
+                } else {
+                    await m.Channel.SendMessageAsync($"{m.Author.Mention}, my prefix is `{prefix}`");
                 }
+                return;
+            } else if (StartsWithRemove(ref command, prefix) || prefixOptional) {
+                int i = 0;
+            } else {
                 return;
             }
 
@@ -77,7 +80,7 @@ namespace SpongeLake.SpongeLake {
                 case "":
                 case prefix: {
                         SendMessage("Welcome to SpongeLake! " +
-                            (users.TryGetValue(id, out LakeUser user) && user.currentPlayerGuid != 0 ? $"You are currently logged in as {playerEntities[user.currentPlayerGuid].name}" :
+                            (users.TryGetValue(id, out LakeUser user) && user.currentPlayer != null ? $"You are currently logged in as `{user.currentPlayer.name}`" :
                             user != null ? strLoginNow :
                             strRegisterNow));
                         break;
@@ -89,17 +92,21 @@ namespace SpongeLake.SpongeLake {
                 case "login": {
                         if (IsRegistered(out LakeUser user)) {
                             if (command.Any()) {
-                                var player = user.playerCharacters.Select(playerId => playerEntities[playerId]).FirstOrDefault(np => np.name == command);
+                                if (user.currentPlayer?.name == command) {
+                                    SendMessage($@"{m.Author.Mention}, you are already logged in as `{command}`.");
+                                    return;
+                                }
+
+                                var player = user.playerCharacters.FirstOrDefault(np => np.name == command);
                                 if (player != null) {
-                                    user.currentPlayerGuid = player.guid;
+                                    user.currentPlayer = player;
                                     SendMessage($@"{m.Author.Mention}: You are now logged in as `{player.name}`");
                                 } else {
                                     SendMessage($@"{m.Author.Mention}: You have no character named `{command}`");
                                 }
                             } else {
-                                var loginList = string.Join(", ", user.playerCharacters.Select(playerId => $"`{playerEntities[playerId].name}`"));
-                                var strLoggedIn = $"You are currently logged in as {playerEntities[user.currentPlayerGuid].name}";
-                                SendMessage($"{m.Author.Mention}: Your logins:\n{loginList}\n{(user.currentPlayerGuid == 0 ? strLoginNow : strLoggedIn)}");
+                                var loginList = string.Join(", ", user.playerCharacters.Select(player => $"`{player.name}`"));
+                                SendMessage($"{m.Author.Mention}: Your logins:\n{loginList}\n{(user.currentPlayer == null ? strLoginNow : $"You are currently logged in as {user.currentPlayer.name}")}");
                             }
                         } else {
                             SendMessage($@"{m.Author.Mention}: {strRegisterNow}");
@@ -107,36 +114,38 @@ namespace SpongeLake.SpongeLake {
                         break;
                     }
                 case "logout": {
-                        if (IsLoggedIn(out LakePlayer player)) {
-                            users[player.userId].currentPlayerGuid = 0;
+                        if (CheckLoggedIn(out LakeUser user, out LakePlayer player)) {
+                            user.currentPlayer = null;
                             SendMessage($@"{m.Author.Mention}, you are now logged out as character `{player.name}`");
                         }
                         break;
                     }
                 case "look": {
                         if (IsRegistered(out LakeUser user)) {
-                            if (user.currentPlayerGuid == 0) {
-                                SendMessage($@"{m.Author.Mention}, you are a disembodied consciousness outside of the realm of SpongeLake. Take control of one of your player characters using `login`!");
+                            if (user.currentPlayer == null) {
+                                SendMessage($@"{m.Author.Mention}: You are a disembodied consciousness outside of the realm of SpongeLake. Take control of one of your player characters! {strLoginNow}");
                             } else {
-                                var player = playerEntities[user.currentPlayerGuid];
+                                var player = user.currentPlayer;
                                 if (rooms.TryGetValue(player.roomId, out var room)) {
                                     Describe(room);
                                 } else {
-                                    SendMessage($@"You appear to be in Null Space. Since you have no idea where you are, there's pretty much no other answer.");
+                                    SendMessage($@"{m.Author.Mention}: You appear to be in Null Space. Since you have no idea where you are, there's pretty much no other answer.");
                                 }
                             }
+                        } else {
+                            SendMessage($@"{m.Author.Mention}: You are in eternal slumber, waiting to be brought into existence. {strRegisterNow}");
                         }
                         break;
 
                     }
                 case "elevator": {
-                        if (IsLoggedIn(out LakePlayer player)) {
+                        if (CheckLoggedIn(out LakeUser user, out LakePlayer player)) {
                             var room = rooms[player.roomId];
                             switch (Subsplit(ref command, ' ')) {
                                 case "add": {
                                         if (room.elevator == null) {
                                             SendMessage($"Added elevator in room {room.id}");
-                                            room.elevator = new LakeElevator();
+                                            room.elevator = new LakeElevator(room);
                                         } else {
                                             SendMessage($"There is already an elevator in room {room.id}");
                                         }
@@ -148,8 +157,8 @@ namespace SpongeLake.SpongeLake {
                                         } else {
                                             string exitDest = Subsplit(ref command, ' ');
                                             room.elevator.floors.Add(new LakeElevator.LakeElevatorFloor() {
-                                                name = $"Floor #{room.elevator.floors.Count + 1}",
-                                                desc = $"The elevator is at floor #{room.elevator.floors.Count + 1}",
+                                                name = $"Floor #{room.elevator.floors.Count}",
+                                                desc = $"The elevator is at floor #{room.elevator.floors.Count}",
                                                 exit = new NetExit() {
                                                     desc = "You exit the elevator.",
                                                     destRoomId = exitDest
@@ -164,7 +173,14 @@ namespace SpongeLake.SpongeLake {
                                             SendMessage($"There is no elevator in room {room.id}");
                                         } else {
                                             if (int.TryParse(Subsplit(ref command, ' '), out int i)) {
-                                                room.elevator.dest.Add(i);
+                                                if (i > -1 && i < room.elevator.floors.Count) {
+                                                    SendMessage($"Pushed button for floor {i}");
+                                                    room.elevator.dest.Add(i);
+                                                } else {
+                                                    SendMessage($"There are {room.elevator.floors.Count} on this elevator");
+                                                }
+                                            } else {
+                                                SendMessage($"That is not a valid floor number");
                                             }
                                         }
                                         break;
@@ -186,7 +202,7 @@ namespace SpongeLake.SpongeLake {
                                         if (room.elevator == null) {
                                             SendMessage($"There is no elevator in room {room.id}");
                                         } else {
-                                            SendMessage(string.Join('\n', room.elevator.floors.Select(floor => $"**{floor.name}** - {floor.exit.destRoomId}")));
+                                            SendMessage(string.Join('\n', room.elevator.floors.Select(floor => $"{floor.name} - `{floor.exit.destRoomId}`")));
                                         }
                                         break;
                                     }
@@ -204,7 +220,7 @@ namespace SpongeLake.SpongeLake {
                         break;
                     }
                 case "exit": {
-                        if (IsLoggedIn(out LakePlayer player)) {
+                        if (CheckLoggedIn(out LakeUser user, out LakePlayer player)) {
                             switch (Subsplit(ref command, ' ')) {
                                 case "add": {
                                         var room = rooms[player.roomId];
@@ -216,6 +232,22 @@ namespace SpongeLake.SpongeLake {
                                             desc = desc
                                         };
                                         SendMessage($"Added exit `{exitName}` to room `{room.id}` leading to `{destRoomId}` with description `{desc}`");
+                                        break;
+                                    }
+                                case "desc": {
+                                        var room = rooms[player.roomId];
+                                        string exitName = Subsplit(ref command, ' ');
+                                        string desc = command;
+                                        if(room.exits.TryGetValue(exitName, out var exit)) {
+                                            if(desc.Any()) {
+                                                exit.desc = desc;
+                                                SendMessage($"Set desc of exit `{exitName}` to `{desc}`");
+                                            } else {
+                                                SendMessage($"Current desc of exit `{exitName}` is `{exit.desc}`");
+                                            }
+                                        } else {
+                                            SendMessage($"There is no exit named `{exitName}`");
+                                        }
                                         break;
                                     }
                                 case "remove": {
@@ -234,7 +266,7 @@ namespace SpongeLake.SpongeLake {
                         break;
                     }
                 case "go": {
-                        if (IsLoggedIn(out LakePlayer player)) {
+                        if (CheckLoggedIn(out LakeUser user, out LakePlayer player)) {
                             string exit = command;
                             var room = rooms[player.roomId];
                             if (room.exits.TryGetValue(exit, out NetExit e)) {
@@ -257,7 +289,7 @@ namespace SpongeLake.SpongeLake {
                         break;
                     }
                 case "home": {
-                        if (IsLoggedIn(out LakePlayer player)) {
+                        if (CheckLoggedIn(out LakeUser user, out LakePlayer player)) {
                             var home = player.homeRoomId;
                             if (rooms.TryGetValue(home, out LakeRoom room)) {
                                 player.roomId = home;
@@ -272,12 +304,12 @@ namespace SpongeLake.SpongeLake {
                         string autoLogin = $"Use `{localPrefix}login {{characterName}}` or click :ok: to login now.";
 
                         Task<DiscordMessage> msgTask;
-                        if (users.TryGetValue(id, out LakeUser user)) {
+                        if (IsRegistered(out LakeUser user)) {
 
-                            if(playerEntities[user.currentPlayerGuid].name == command) {
+                            if(user.currentPlayer?.name == command) {
                                 msgTask = SendMessage($@"{m.Author.Mention}, you are already logged in as `{command}`.");
                                 return;
-                            } else if (user.GetPlayers(this).Any(p => p.name == command)) {
+                            } else if (user.playerCharacters.Any(p => p.name == command)) {
                                 msgTask = SendMessage($@"{m.Author.Mention}, you already have a new character named `{command}`. {autoLogin}");
                                 AutoLogin();
                                 return;
@@ -295,22 +327,26 @@ namespace SpongeLake.SpongeLake {
                         async Task AutoLogin() {
                             var msg = await msgTask;
 
-                            await msg.CreateReactionAsync(DiscordEmoji.FromName(discord, ":ok:"));
+                            var ok = DiscordEmoji.FromName(discord, ":ok:");
+
+                            await msg.CreateReactionAsync(ok);
                             discord.MessageReactionAdded += Login;
 
                             async Task Login(MessageReactionAddEventArgs args) {
                                 if (args.Message.Id != msg.Id) {
                                     return;
-                                } else if (args.Emoji.GetDiscordName() != ":ok:") {
+                                } else if (args.Emoji.GetDiscordName() != ok.GetDiscordName()) {
                                     return;
                                 } else if (args.User.Id != user.userId) {
                                     return;
                                 }
 
-                                var player = user.playerCharacters.Select(playerId => playerEntities[playerId]).FirstOrDefault(np => np.name == command);
+                                var player = user.playerCharacters.FirstOrDefault(np => np.name == command);
                                 if (player != null) {
-                                    user.currentPlayerGuid = player.guid;
+                                    user.currentPlayer = player;
                                     SendMessage($@"{m.Author.Mention}: You are now logged in as `{player.name}`");
+                                    msg.DeleteOwnReactionAsync(ok);
+                                    msg.DeleteReactionAsync(ok, args.User);
                                 }
                                 discord.MessageReactionAdded -= Login;
                             }
@@ -332,7 +368,7 @@ namespace SpongeLake.SpongeLake {
                             playerEntities[guid] = player;
 
                             //Add this player to the user's players
-                            user.playerCharacters.Add(guid);
+                            user.playerCharacters.Add(player);
 
                             //Create a home for this player
                             CreateHome(player);
@@ -341,7 +377,7 @@ namespace SpongeLake.SpongeLake {
                     }
 
                 case "room": {
-                        if (IsLoggedIn(out LakePlayer player)) {
+                        if (CheckLoggedIn(out LakeUser user, out LakePlayer player)) {
                             switch (Subsplit(ref command, ' ')) {
                                 case "create": {
                                         if (rooms.TryGetValue(command, out LakeRoom room)) {
@@ -364,7 +400,10 @@ namespace SpongeLake.SpongeLake {
                                     }
                                 case "desc": {
                                         var room = rooms[player.roomId];
-                                        room.name = command;
+                                        room.description = command;
+                                        if(room.elevator != null) {
+                                            room.elevator.roomDesc = command;
+                                        }
                                         SendMessage($"Set the description of room `{room.id}` to {command}");
                                         break;
                                     }
@@ -380,7 +419,7 @@ namespace SpongeLake.SpongeLake {
                         break;
                     }
                 case "warp": {
-                        if (IsLoggedIn(out LakePlayer player)) {
+                        if (CheckLoggedIn(out LakeUser user, out LakePlayer player)) {
                             if (rooms.TryGetValue(command, out LakeRoom room)) {
                                 player.roomId = command;
                                 SendMessage($"{player.name} warps to room `{room.id}`!");
@@ -403,10 +442,10 @@ namespace SpongeLake.SpongeLake {
                     return false;
                 }
             }
-            bool IsLoggedIn(out LakePlayer player) {
-                bool result = IsRegistered(out LakeUser user) && user.currentPlayerGuid != 0;
+            bool CheckLoggedIn(out LakeUser user, out LakePlayer player) {
+                bool result = IsRegistered(out user) && user.currentPlayer != null;
                 if(result) {
-                    player = playerEntities[user.currentPlayerGuid];
+                    player = user.currentPlayer;
                 } else {
                     player = null;
                     SendMessage($@"{m.Author.Mention}, you are not logged in." + user != null ? strLoginNow : strRegisterNow);
