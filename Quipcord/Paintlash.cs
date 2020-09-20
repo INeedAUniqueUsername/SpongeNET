@@ -10,7 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using ImageFormat = System.Drawing.Imaging.ImageFormat;
 
-namespace SpongeNET {
+namespace SpongeLake {
     public class Paintlash {
         private DiscordClient client;
         public void OnLoad(Program p) {

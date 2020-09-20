@@ -2,35 +2,31 @@
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using Newtonsoft.Json;
-using SpongeNET.SpongeNET;
+using SpongeLake.SpongeLake;
 using System;
 using System.IO;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
-namespace SpongeNET
+namespace SpongeLake
 {
     class Program
     {
         DiscordClient discord;
-
         static void Main(string[] args)
         {
             Program p = new Program();
             p.MainAsync(args).ConfigureAwait(false).GetAwaiter().GetResult();
         }
-
         async Task MainAsync(string[] args)
         {
             discord = new DiscordClient(new DiscordConfiguration {
-                Token = "NDE3NTQyNDQ0MzUyMDEyMjg4.XgHF6A.sWSYkN9uGWQsnt62sYnAKJ4WKNk",
+                Token = "NjU2Mzk0OTY0MjQ2MjAwMzMw.XfiBcg.lf4lrXfWRfeDv-y9EX9iKHjUKiY",
                 TokenType = TokenType.Bot,
                 UseInternalLogHandler = true,
                 LogLevel = LogLevel.Debug
             });
             discord.MessageCreated += async e => await Task.Run(() => Handle(e));
-            a = new Acro(discord);
-            m = new Markov(discord);
-            net = new Net(discord);
+            lake = new Lake(discord);
             LoadModules();
             PeriodicSave();
             PeriodicUpdate();
@@ -46,7 +42,7 @@ namespace SpongeNET
             });
         }
         public async void PeriodicUpdate() {
-            net.Update();
+            lake.Update();
             Console.WriteLine("Update");
             await Task.Run(async () => {
                 await Task.Delay(1000);
@@ -54,17 +50,11 @@ namespace SpongeNET
             });
         }
         public void LoadModules() {
-            Load(ref a);
-            Load(ref net);
-            Load(ref m);
-            a.Load(discord);
-            net.Load(discord);
-            m.Load(discord);
+            Load(ref lake);
+            lake.Load(discord);
         }
         public void SaveModules() {
-            Save(a);
-            Save(net);
-            Save(m);
+            Save(lake);
         }
         public string GetFile<T>() {
             return $"./{typeof(T).Name}.xml";
@@ -86,9 +76,7 @@ namespace SpongeNET
             if (File.Exists(f))
                 t = JsonConvert.DeserializeObject<T>(File.ReadAllText(f));
         }
-        Acro a;
-        Markov m;
-        Net net;
+        Lake lake;
 
         async void Handle(MessageCreateEventArgs e) {
             if (e.Message.Content.Equals(".save")) {
@@ -105,9 +93,7 @@ namespace SpongeNET
 
             try {
                 await Task.Run(() => {
-                    a.Handle(e.Message);
-                    net.Handle(e.Message);
-                    m.Handle(e.Message);
+                    lake.Handle(e.Message);
                 });
             } catch(Exception ex) {
                 await e.Channel.SendMessageAsync($"Damn, you got me there, {e.Author.Mention}. Says here that \"{ex.Message}\". I don't know what that means, but uh oh, I guess. I'll just wait here until someone comes to fix me.");

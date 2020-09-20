@@ -4,7 +4,7 @@ using Quipcord;
 using System;
 using System.IO;
 using System.Threading.Tasks;
-namespace SpongeNET {
+namespace SpongeLake {
     public class Program {
         public DiscordClient client;
         public Acrolash acro;

@@ -7,7 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace SpongeNET {
+namespace SpongeLake {
     public class Acrolash {
         private DiscordClient client;
         public Dictionary<ulong, Game> gameByChannel = new Dictionary<ulong, Game>();

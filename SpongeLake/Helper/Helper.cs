@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace SpongeNET
+namespace SpongeLake
 {
     static class Helper
     {
@@ -13,27 +13,6 @@ namespace SpongeNET
             {
                 return data[member];
             } catch
-            {
-                return fallback;
-            }
-        }
-        public static bool Try(dynamic data, string member, bool fallback)
-        {
-            try
-            {
-                return data[member];
-            } catch
-            {
-                return fallback;
-            }
-        }
-        public static int Try(dynamic data, string member, int fallback)
-        {
-            try
-            {
-                return data[member];
-            }
-            catch
             {
                 return fallback;
             }
@@ -66,6 +45,14 @@ namespace SpongeNET
             } catch
             {
                 return fallback;
+            }
+        }
+        public static bool StartsWithRemove(ref string s, string start) {
+            if(s.StartsWith(start)) {
+                s = s.Substring(start.Length).TrimStart();
+                return true;
+            } else {
+                return false;
             }
         }
         public static string Subsplit(ref string s, char separator = ' ') {
