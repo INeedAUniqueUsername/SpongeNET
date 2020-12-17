@@ -1,4 +1,4 @@
-﻿namespace SpongeLake.SpongeLake {
+﻿namespace Quipcord.SpongeLake {
     public interface NetEntity {
 
     }

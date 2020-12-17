@@ -1,10 +1,23 @@
-﻿using DSharpPlus;
+﻿using Common;
+using static Common.Common;
+using DSharpPlus;
 using Newtonsoft.Json;
 using Quipcord;
 using System;
 using System.IO;
 using System.Threading.Tasks;
-namespace SpongeLake {
+using DSharpPlus.Entities;
+using DSharpPlus.EventArgs;
+
+namespace Quipcord {
+    public static class SClient {
+        public static async Task React(this MessageCreateEventArgs e, DiscordClient client, string name) {
+            e.Message.CreateReactionAsync(DiscordEmoji.FromName(client, name));
+        }
+        public static async Task Unreact(this MessageCreateEventArgs e, DiscordClient client, string name) {
+            e.Message.DeleteReactionAsync(DiscordEmoji.FromName(client, name), client.CurrentUser);
+        }
+    }
     public class Program {
         public DiscordClient client;
         public Acrolash acro;
@@ -19,7 +32,7 @@ namespace SpongeLake {
 
         async Task MainAsync(string[] args) {
             client = new DiscordClient(new DiscordConfiguration {
-                Token = "Njg0NTk5MTYyNzA4MTY0NjEx.XmRwWg.O-hdJj2zqk6Ivv571fW2qdDCDCY",
+                Token = "Njg0NTk5MTYyNzA4MTY0NjEx.Xl8cpw.Xga2HKVAKlp9665TL5zQ85xUumk",
                 TokenType = TokenType.Bot,
                 UseInternalLogHandler = true,
                 LogLevel = LogLevel.Debug
@@ -35,11 +48,11 @@ namespace SpongeLake {
                             Environment.Exit(0);
                             break;
                     }
-                    await Task.Run(() => acro.Handle(e));
-                    await Task.Run(() => markov.Handle(e));
-                    await Task.Run(() => paint.Handle(e));
-                    await Task.Run(() => quip.Handle(e));
-                    await Task.Run(() => quote.Handle(e));
+                    await acro.Handle(e);
+                    await markov.Handle(e);
+                    await paint.Handle(e);
+                    await quip.Handle(e);
+                    await quote.Handle(e);
                 } catch(Exception ex) {
                     PeriodicSave();
                     //e.Channel.SendMessageAsync("Oops");
@@ -73,34 +86,6 @@ namespace SpongeLake {
                 await Task.Delay(1000 * 60 * 60);
                 PeriodicSave();
             });
-        }
-        public void Save<T>(T t) {
-            var f = $"./{typeof(T).Name}.json";
-            Console.WriteLine(Path.GetFullPath(f));
-
-            File.WriteAllText(f, JsonConvert.SerializeObject(t, Formatting.Indented, new JsonSerializerSettings() {
-                TypeNameHandling = TypeNameHandling.All,
-                PreserveReferencesHandling = PreserveReferencesHandling.All
-            }));
-        }
-        public T Load<T>() {
-            var f = $"{typeof(T).Name}.json";
-            Console.WriteLine(Path.GetFullPath(f));
-            if (File.Exists(f)) {
-                T t = JsonConvert.DeserializeObject<T>(File.ReadAllText(f));
-                return t;
-            }
-            return default(T);
-        }
-        public bool Load<T>(out T t) {
-            var f = $"{typeof(T).Name}.json";
-            Console.WriteLine(Path.GetFullPath(f));
-            if (File.Exists(f)) {
-                t = JsonConvert.DeserializeObject<T>(File.ReadAllText(f));
-                return true;
-            }
-            t = default(T);
-            return false;
         }
     }
 }

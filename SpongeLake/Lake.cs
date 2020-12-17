@@ -4,11 +4,11 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
-using static SpongeLake.Helper;
+using static Quipcord.Helper;
 using System.Threading.Tasks;
 using DSharpPlus.EventArgs;
 
-namespace SpongeLake.SpongeLake {
+namespace Quipcord.SpongeLake {
     public partial class Lake {
         public const string prefix = ".lake";
         private DiscordClient discord;

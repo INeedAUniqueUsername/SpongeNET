@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
-namespace SpongeLake.SpongeLake {
+namespace Quipcord.SpongeLake {
     public class LakeUser {
         public ulong userId;
         public ulong channelId;

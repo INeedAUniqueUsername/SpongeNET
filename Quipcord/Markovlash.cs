@@ -1,7 +1,7 @@
 ﻿using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
-using SpongeLake;
+using Quipcord;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,7 +25,7 @@ namespace Quipcord {
             this.client = p.client;
             quote = p.quote;
         }
-        public async void Handle(MessageCreateEventArgs e) {
+        public async Task Handle(MessageCreateEventArgs e) {
             var m = e.Message;
 
             switch(m.Content) {

@@ -7,12 +7,33 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-namespace SpongeLake {
+
+public enum Languages {
+    English
+}
+
+namespace Quipcord {
     public class Quiplash {
+        public enum Strings {
+            Answer = 0,
+            Asks = 1,
+        }
+        public static Dictionary<Strings, Dictionary<Languages, string>> translations = new() {
+            { Strings.Asks, new() {
+                    { Languages.English, "%name% asks, %question%" }
+                } }
+
+        };
+
+        static Quiplash() {
+            var s = translations[Strings.Asks][Languages.English].Replace("%name%", "aaaaa");
+        }
+
         private DiscordClient client;
         public Dictionary<ulong, Game> gameByChannel = new Dictionary<ulong, Game>();
         public Quiplash() {
             gameByChannel = new Dictionary<ulong, Game>();
+
         }
         public void OnLoad(Program p) {
             this.client = p.client;
@@ -27,12 +48,13 @@ namespace SpongeLake {
         public void OnSave() {
 
         }
-        public async void Handle(MessageCreateEventArgs e) {
+        public async Task Handle(MessageCreateEventArgs e) {
             if (e.Author.IsCurrent) {
                 return;
             }
             //See if a game is currently running
             if (gameByChannel.TryGetValue(e.Channel.Id, out Game game)) {
+                Console.WriteLine($"Quipcord: Game running");
                 game.Handle(e);
             } else {
                 Regex splitter = new Regex($"({Regex.Escape("?")})");
@@ -50,6 +72,8 @@ namespace SpongeLake {
                     };
                     gameByChannel[e.Channel.Id] = g;
                     Update(g);
+
+                    Console.WriteLine($"Quipcord: {question}");
                 }
             }
         }
@@ -116,13 +140,13 @@ namespace SpongeLake {
                     responseByUser[e.Author.Id] = e.Message.Content.Split("\n").First();
                 }
             }
-            public async void OpenSubmissions(DiscordClient e) {
+            public async Task OpenSubmissions(DiscordClient e) {
                 state = GameState.Submissions;
                 var name = (await e.GetUserAsync(askerId)).Username;
                 var channel = await e.GetChannelAsync(channelId);
-                //await e.SendMessageAsync(channel, $"{name} asks, \"{question}\" Answer below!");
+                await e.SendMessageAsync(channel, $"{name} asks, \"{question}\" Answer below!");
             }
-            public async void OpenVoting(DiscordClient e) {
+            public async Task OpenVoting(DiscordClient e) {
                 var name = (await e.GetUserAsync(askerId)).Username;
 
                 int index = 0;
@@ -130,7 +154,7 @@ namespace SpongeLake {
                 var regional = Enumerable.Range(0, 26).Select(i => $":regional_indicator_{('a' + i)}:");
                 List<string> reactions = digits.Concat(regional).ToList();
 
-                if (responseByUser.Count > 1) {
+                if (responseByUser.Count > 0) {
                     var message = new StringBuilder($"{name} asked, \"{question}\" Here are your answers!\n");
                     foreach ((var userId, var response) in responseByUser) {
                         var username = (await e.GetUserAsync(userId)).Username;
@@ -151,7 +175,7 @@ namespace SpongeLake {
                     state = GameState.Submissions;
                 }
             }
-            public async void CloseGame(DiscordClient e) {
+            public async Task CloseGame(DiscordClient e) {
                 state = GameState.Done;
                 if (!responseByUser.Any()) {
                     return;

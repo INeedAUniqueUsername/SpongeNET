@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace SpongeLake {
+namespace Quipcord {
 
     public class Dinner {
         private DiscordClient client;

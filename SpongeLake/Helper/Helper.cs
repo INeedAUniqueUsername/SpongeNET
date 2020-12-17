@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace SpongeLake
+namespace Quipcord
 {
     static class Helper
     {

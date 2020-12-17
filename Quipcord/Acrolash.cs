@@ -1,13 +1,15 @@
 ﻿using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
-namespace SpongeLake {
+namespace Quipcord {
     public class Acrolash {
         private DiscordClient client;
         public Dictionary<ulong, Game> gameByChannel = new Dictionary<ulong, Game>();
@@ -27,19 +29,33 @@ namespace SpongeLake {
         public void OnSave() {
 
         }
-        public async void Handle(MessageCreateEventArgs e) {
+        public async Task Handle(MessageCreateEventArgs e) {
             if (e.Author.IsCurrent) {
                 return;
             }
+
+            bool allowed = e.Channel.PermissionsFor(await e.Guild.GetMemberAsync(client.CurrentUser.Id)).HasPermission(Permissions.SendMessages);
+
             //See if a game is currently running
             if (gameByChannel.TryGetValue(e.Channel.Id, out Game game)) {
                 game.Handle(e);
             } else {
+                
+
+
                 Regex splitter = new Regex($"({Regex.Escape("?")}|{Regex.Escape("!")}|{Regex.Escape(" ")}|{Regex.Escape(",")}|{Regex.Escape(".")}|{Regex.Escape("'")})");
                 var content = splitter.Split(e.Message.Content);
 
                 var acronym = content.FirstOrDefault(s => s.All(c => char.IsUpper(c)));
                 if (!string.IsNullOrEmpty(acronym)) {
+                    if (!allowed) {
+                        await e.React(client, ":x:");
+                        Task.Run(async () => {
+                            await Task.Delay(2000);
+                            await e.Unreact(client, ":x:");
+                        });
+                        return;
+                    }
                     Game g = new Game() {
                         channelId = e.Channel.Id,
                         askerId = e.Author.Id,

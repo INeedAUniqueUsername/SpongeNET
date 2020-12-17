@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 using System;
 using System.IO;
 using System.Threading.Tasks;
-namespace SpongeLake {
+namespace Quipcord {
     class Program {
         DiscordClient discord;
         Dinner d;

@@ -10,13 +10,13 @@ using System.Text;
 using System.Threading.Tasks;
 using ImageFormat = System.Drawing.Imaging.ImageFormat;
 
-namespace SpongeLake {
+namespace Quipcord {
     public class Paintlash {
         private DiscordClient client;
         public void OnLoad(Program p) {
             this.client = p.client;
         }
-        public async void Handle(MessageCreateEventArgs e) {
+        public async Task Handle(MessageCreateEventArgs e) {
             if (e.Author.IsCurrent) {
                 return;
             }

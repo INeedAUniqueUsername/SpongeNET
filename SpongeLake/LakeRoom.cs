@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-namespace SpongeLake.SpongeLake {
+namespace Quipcord.SpongeLake {
     public class LakeRoom {
         public string id;
         public string name;

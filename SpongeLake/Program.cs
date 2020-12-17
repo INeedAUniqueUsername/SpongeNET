@@ -2,12 +2,12 @@
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using Newtonsoft.Json;
-using SpongeLake.SpongeLake;
+using Quipcord.SpongeLake;
 using System;
 using System.IO;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
-namespace SpongeLake
+namespace Quipcord
 {
     class Program
     {

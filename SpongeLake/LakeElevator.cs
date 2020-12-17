@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
-namespace SpongeLake.SpongeLake {
+namespace Quipcord.SpongeLake {
     public class LakeElevator {
         public string roomDesc;
         public List<LakeElevatorFloor> floors = new List<LakeElevatorFloor>();

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-namespace SpongeLake.SpongeLake {
+namespace Quipcord.SpongeLake {
     public class TypeDict<T> {
         public Dictionary<Type, T> components;
         public bool Has<U>() where U : T => components.ContainsKey(typeof(U));
