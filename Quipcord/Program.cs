@@ -32,7 +32,7 @@ namespace Quipcord {
 
         async Task MainAsync(string[] args) {
             client = new DiscordClient(new DiscordConfiguration {
-                Token = "Njg0NTk5MTYyNzA4MTY0NjEx.Xl8cpw.Xga2HKVAKlp9665TL5zQ85xUumk",
+                Token = Tokens.QUIPCORD,
                 TokenType = TokenType.Bot,
                 UseInternalLogHandler = true,
                 LogLevel = LogLevel.Debug
